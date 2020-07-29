@@ -1,0 +1,20 @@
+{
+  "name": "ims-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.721.0",
+    "express": "^4.17.1",
+    "uuid": "^8.3.0"
+  }
+}
