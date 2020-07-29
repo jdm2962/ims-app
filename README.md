@@ -1,3 +1,3 @@
 # Inventory management system
 
-Build using react, nodejs, express, aws: dynamodb, ec2, api gateway.
+Built using react, nodejs, express, aws: dynamodb, ec2, api gateway.

@@ -16,12 +16,12 @@ let resData = [];
 
 
 // home route
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
 	res.send("<h1>React HomePage filler!</h1>");
 });
 
 // get all items
-app.get('/items', (req, res) => {
+app.get('/api/items', (req, res) => {
 	dynamo.scan(params, (err, data) => {
 		if(err) throw err;
 		data['Items'].forEach(item => {
