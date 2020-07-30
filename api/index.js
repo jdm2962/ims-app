@@ -1,9 +1,13 @@
 const express = require('express');
+const cors = require('cors');
 
 const aws = require('aws-sdk');
 const dynamo = new aws.DynamoDB({'region' : 'us-east-1'});
 
 const app = express();
+
+app.use(cors());
+
 const port = 3000;
 
 const tableName = 'ims-table';
