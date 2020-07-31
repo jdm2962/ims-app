@@ -1,7 +1,6 @@
 cd /var/www/html/ims-app;
 sudo git pull;
-cd /ims-react;
+cd /var/www/html/ims-app/ims-react;
 npm install;
-cd ..;
-cd /api;
+cd /var/www/html/ims-app/api;
 npm install;
