@@ -1,0 +1,26 @@
+# For help completing this file, see the "AppSpec File Reference" in the  
+#   "CodeDeploy User Guide" at
+#   https://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html
+version: 0.0
+
+os: linux 
+
+files:
+  - source: /
+    destination: /var/www/html/ims-app
+
+permissions:
+  - object: /var/www/html/ims-app
+    owner: ec2-user
+    group: ec2-user
+
+
+hooks:
+  AfterInstall:
+    - location: /tmp/code-deploy-folder/revision/after-install.sh
+      timeout: 300
+      runas: ec2-user
+  ApplicationStart:
+    - location: /tmp/code-deploy-folder/revision/application-start.sh  
+      timeout: 300
+      runas: ec2-user

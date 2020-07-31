@@ -5,4 +5,3 @@ npm install;
 cd ..;
 cd /api;
 npm install;
-pm2 restart index;
