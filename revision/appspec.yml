@@ -17,10 +17,10 @@ permissions:
 
 hooks:
   AfterInstall:
-    - location: /tmp/code-deploy-folder/revision/after-install.sh
+    - location: /var/www/html/ims-app/revision/after-install.sh
       timeout: 300
       runas: ec2-user
   ApplicationStart:
-    - location: /tmp/code-deploy-folder/revision/application-start.sh  
+    - location: /var/www/html/ims-app/revision/after-install.sh/application-start.sh  
       timeout: 300
       runas: ec2-user
