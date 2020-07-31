@@ -28,8 +28,15 @@ app.get('/api', (req, res) => {
 app.get('/api/items', (req, res) => {
 	dynamo.scan(params, (err, data) => {
 		if(err) throw err;
-		data['Items'].forEach(item => {
-			resData.push(item);
+		// console.log(data);
+		data['Items'].map((item) => {
+			resData.push(
+				{
+					category : item.category.S,
+					id : item.itemId.N,
+					name : item.name.S
+				}
+			);
 		});
 		res.json(resData);
 		resData = [];
