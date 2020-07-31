@@ -46,7 +46,7 @@ app.get('/api/items', (req, res) => {
 
 
 // test route
-app.get('/api/test', (req, res) => {
+app.get('/api/re', (req, res) => {
 	res.json({'testStatus' : 'success'});
 });
 
