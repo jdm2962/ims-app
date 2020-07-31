@@ -45,6 +45,12 @@ app.get('/api/items', (req, res) => {
 });
 
 
+// test route
+app.get('/api/test', (req, res) => {
+	res.json({'testStatus' : 'success'});
+});
+
+
 // get a single item by id
 
 // insert an item w/ attributes
