@@ -11,10 +11,6 @@ app.use(cors());
 const port = 3000;
 
 const tableName = 'ims-table';
-const params = {
-	TableName : tableName,
-	// ProjectionExpression : 'category'
-};
 
 let resData = [];
 
@@ -26,6 +22,11 @@ app.get('/api', (req, res) => {
 
 // get all items
 app.get('/api/items', (req, res) => {
+	const params = {
+	TableName : tableName,
+	// ProjectionExpression : 'category'
+	};
+
 	dynamo.scan(params, (err, data) => {
 		if(err) throw err;
 		data['Items'].map((item) => {
@@ -47,6 +48,20 @@ app.get('/api/items', (req, res) => {
 
 
 // get a single item by id
+app.get('api/items/:id', (req, res) => {
+	const params = {
+	TableName : tableName,
+	Key : {
+		'itemId' : 2,
+	}
+	// ProjectionExpression : 'category'
+	};
+
+	dynamo.getItem(params, (err, data) => {
+		if(err) throw err;
+		res.json(data);
+	});
+});
 
 // insert an item w/ attributes
 
