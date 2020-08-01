@@ -28,7 +28,6 @@ app.get('/api', (req, res) => {
 app.get('/api/items', (req, res) => {
 	dynamo.scan(params, (err, data) => {
 		if(err) throw err;
-		// console.log(data);
 		data['Items'].map((item) => {
 			resData.push(
 				{
@@ -45,10 +44,6 @@ app.get('/api/items', (req, res) => {
 });
 
 
-// test route
-app.get('/api/re', (req, res) => {
-	res.json({'testStatus' : 'success'});
-});
 
 
 // get a single item by id
