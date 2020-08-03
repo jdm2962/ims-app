@@ -45,22 +45,41 @@ app.get('/api/items', (req, res) => {
 });
 
 
-
-
-// get a single item by id
-app.get('api/items/:id', (req, res) => {
+// get a single item category and item name
+app.get('/api/item/:category/:name', (req, res) => {
+	const id = req.params.id;
+	const category = req.params.category;
+	const name = req.params.name;
 	const params = {
-	TableName : tableName,
-	Key : {
-		'itemId' : 2,
-	}
-	// ProjectionExpression : 'category'
+		TableName : tableName,
+		IndexName : "category-name-index",
+		ExpressionAttributeNames : {
+			'#n' : 'name'
+		},
+		ExpressionAttributeValues : {
+			':name' : {"S" : name},
+			':category' : {"S" : category}
+		},
+		KeyConditionExpression : `category = :category AND #n = :name`
 	};
 
-	dynamo.getItem(params, (err, data) => {
-		if(err) throw err;
-		res.json(data);
+
+	dynamo.query(params, (err, data) => {
+		if(err){
+			console.log(err);
+			res.status(500).send('Server Error');
+		}
+		if(data.Count === 0) res.status(404).send('Sorry, it looks like that item doesn\'t exist');
+		else {
+			resData = {
+				'category' : data.Items[0].category.S,
+				'name' : data.Items[0].name.S,
+				'id' : data.Items[0].itemId.N
+			}
+			res.json(resData);	
+		}
 	});
+
 });
 
 // insert an item w/ attributes
