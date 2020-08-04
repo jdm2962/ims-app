@@ -165,6 +165,66 @@ app.delete('/api/item/:category/:name', (req, res) => {
 // update an item by id
 
 // update an item by category + name
+app.put('/api/item/:category/:name', (req, res) => {
+	let category = req.params.category;
+	let name = req.params.name;
+	let updateExpression = 'SET ';
+	let expressionAttributeValues = {
+
+	};
+
+	// make sure category or name is not being updated
+	if(req.query.name || req.query.category){
+		res.status(400).send('Cannot update category or name. Create a new item.')
+	}
+	else{
+		// get query parameter with updates
+		// populate expressionAttributeValues
+		Object.keys(req.query).forEach((value, index, array) => {
+
+			expressionAttributeValues[`:${Object.keys(req.query)[index][0]}`] = (isNaN(parseInt(req.query[value]))) ? {S : req.query[value]} : {N : req.query[value]};
+
+			// use different formatting if value is the last element in the array
+			if(index === array.length - 1){
+				
+				updateExpression += `${Object.keys(req.query)[index]} = :${Object.keys(req.query)[index][0]} `;
+			}
+			else{
+
+				updateExpression += `${Object.keys(req.query)[index]} = :${Object.keys(req.query)[index][0]}, `;
+			}
+		});
+
+		const params = {
+			TableName : tableName,
+			Key : {
+				'category' : {'S': category},
+				'name' : {'S': name}
+			},
+			ExpressionAttributeValues : expressionAttributeValues,
+			UpdateExpression: updateExpression,
+			ReturnValues: 'ALL_NEW',
+			ConditionExpression : 'attribute_exists(id)'
+		};
+
+
+		dynamo.updateItem(params, (err, data) => {
+
+			if(err){
+				if(err.code === 'ConditionalCheckFailedException') res.status(400).send("Error. You can only update existing items.");
+				else{
+					console.log(err);
+					res.status(500).send('Server Error')
+				}
+			}
+			else
+			{
+				res.json(data);
+			}
+
+		});
+	}
+});
 
 app.listen(port, () => console.log(`Server listening at http://localhost:${port}`));
 
