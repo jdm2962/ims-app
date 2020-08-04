@@ -89,10 +89,6 @@ app.get('/api/item/:category/:name', (req, res) => {
 			resData = [];
 		}
 	});
-
-
-	
-
 });
 
 // insert an item w/ attributes
@@ -134,12 +130,41 @@ app.post('/api/item', (req, res) => {
 			else res.status(200).send("Success. Item entered");
 		});
 	}
-
 });
 
 // delete an item by id
 
+// delete an item by category + name
+app.delete('/api/item/:category/:name', (req, res) => {
+
+	let category = req.params.category;
+	let name = req.params.name;
+	const params = {
+		TableName : tableName,
+		Key : {
+			'category' : {'S' : category},
+			'name' : {'S' : name}
+		},
+		ConditionExpression : 'attribute_exists(id)'
+	};
+
+	dynamo.deleteItem(params, (err, data) => {
+		if(err){
+			if(err.code === 'ConditionalCheckFailedException') res.status(404).send('It looks like that item doesn\'t exist. Try another item.');
+			else{
+				console.log(err);
+				res.status(500).send("Server Error")
+			}
+			
+		}
+		else res.status(200).send('Success. Item deleted.');
+	});
+
+});
+
 // update an item by id
+
+// update an item by category + name
 
 app.listen(port, () => console.log(`Server listening at http://localhost:${port}`));
 
