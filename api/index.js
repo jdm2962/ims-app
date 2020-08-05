@@ -36,9 +36,10 @@ app.get('/api/items', (req, res) => {
 					'category' : item.category.S,
 					'id' : item.id.S,
 					'name' : item.name.S,
-					'quantity' : item.quantity.N,
+					'singles' : item.singles.N,
 					'packages' : item.packages.N,
-					'quantityPerPackage' : item.quantityPerPackage.N
+					'quantityPerPackage' : item.quantityPerPackage.N,
+					'total' : item.total.N
 				}
 			);
 		});
@@ -81,9 +82,10 @@ app.get('/api/item/:category/:name', (req, res) => {
 				'category' : data.Item.category.S,
 				'name' : data.Item.name.S,
 				'id' : data.Item.id.S,
-				'quantity' : data.Item.quantity.N,
+				'singles' : data.Item.singles.N,
 				'packages' : data.Item.packages.N,
-				'quantityPerPackage' : data.Item.quantityPerPackage.N
+				'quantityPerPackage' : data.Item.quantityPerPackage.N,
+				'total' : data.Item.total.N
 			}
 			res.json(resData);
 			resData = [];
@@ -97,9 +99,10 @@ app.post('/api/item', (req, res) => {
 	let id = uuid.v4();
 	let name = (!req.query.name) ? '' : req.query.name.toLowerCase();
 	let category = (!req.query.category) ? 'uncategorized' : req.query.category.toLowerCase();
-	let quantity = (!req.query.quantity) ? 0 : req.query.quantity;
+	let singles = (!req.query.singles) ? 0 : req.query.singles;
 	let packages = (!req.query.packages) ? 0 : req.query.packages;
 	let quantityPerPackage = (!req.query.quantityPerPackage) ? 0 : req.query.quantityPerPackage;
+	let total = parseInt(singles) + (quantityPerPackage * packages);
 
 	const params = {
 		TableName : tableName,
@@ -107,9 +110,10 @@ app.post('/api/item', (req, res) => {
 			'id' : {'S' : id},
 			'category' : {'S' : category},
 			'name' : {'S' : name},
-			'quantity' : {'N' : quantity.toString()},
+			'singles' : {'N' : singles.toString()},
 			'packages' : {'N' : packages.toString()},
-			'quantityPerPackage' : {'N' : quantityPerPackage.toString()}
+			'quantityPerPackage' : {'N' : quantityPerPackage.toString()},
+			'total' : {'N' : total.toString()}
 
 		},
 		ConditionExpression : 'attribute_not_exists(id)', 
@@ -169,44 +173,64 @@ app.put('/api/item/:category/:name', (req, res) => {
 	let category = req.params.category;
 	let name = req.params.name;
 	let updateExpression = 'SET ';
-	let expressionAttributeValues = {
-
+	let expressionAttributeValues = {};
+	const params = {
+		TableName : tableName,
+		Key : {
+			'category' : {'S': category},
+			'name' : {'S': name}
+		},
+		ExpressionAttributeValues : expressionAttributeValues,
+		UpdateExpression: updateExpression,
+		ReturnValues: 'ALL_NEW',
+		ConditionExpression : 'attribute_exists(id)'
 	};
+	const correctParams = ['singles', 'packages', 'quantityPerPackage'];
 
 	// make sure category or name is not being updated
 	if(req.query.name || req.query.category){
 		res.status(400).send('Cannot update category or name. Create a new item.')
 	}
-	else{
-		// get query parameter with updates
-		// populate expressionAttributeValues
-		Object.keys(req.query).forEach((value, index, array) => {
 
-			expressionAttributeValues[`:${Object.keys(req.query)[index][0]}`] = (isNaN(parseInt(req.query[value]))) ? {S : req.query[value]} : {N : req.query[value]};
+	else{	// populate expressionAttributeValues and updateExpression
+	
+		const queryArray = Object.entries(req.query);
 
-			// use different formatting if value is the last element in the array
-			if(index === array.length - 1){
-				
-				updateExpression += `${Object.keys(req.query)[index]} = :${Object.keys(req.query)[index][0]} `;
-			}
+		for(const index in queryArray){
+			let key = queryArray[index][0];
+			let value = queryArray[index][1];
+
+			// check for incorrect query string params
+			if(!correctParams.includes(key)) res.status(400).send('Error. One or more incorrect parameters. Correct parameters are singles, packages, quantityPerPackage');
 			else{
 
-				updateExpression += `${Object.keys(req.query)[index]} = :${Object.keys(req.query)[index][0]}, `;
+				// populate expressionAttributeValues
+				if(isNaN(parseInt(value))) res.status(400).send(`Value for ${key} should be a number.`);
+				else expressionAttributeValues[`:${key[0]}`] = {N : value};
+
+				// populate updateExpression
+				// use different formatting if value is the last element in the array
+				if(parseInt(index) === (queryArray.length - 1)) updateExpression += `${key} = :${key[0]}`;
+				else updateExpression += `${key} = :${key[0]}, `;
 			}
-		});
+		}
 
-		const params = {
-			TableName : tableName,
-			Key : {
-				'category' : {'S': category},
-				'name' : {'S': name}
-			},
-			ExpressionAttributeValues : expressionAttributeValues,
-			UpdateExpression: updateExpression,
-			ReturnValues: 'ALL_NEW',
-			ConditionExpression : 'attribute_exists(id)'
-		};
+		// calculate total if necessary
 
+		// check if singles, packages, or quantitiyPerPackage is in the query string params
+
+		// if some are present check to see if all necessary to calculate total are there
+
+		// if not, query db for rest
+			// calculate total
+			// add total to updateExpression
+
+		// if they are add to updateExpression
+
+		
+
+		params.UpdateExpression = updateExpression;
+		params.ExpressionAttributeValues = expressionAttributeValues;
 
 		dynamo.updateItem(params, (err, data) => {
 
