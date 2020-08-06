@@ -16,12 +16,14 @@ class Table extends React.Component{
 	componentDidMount(){
 
 		fetch('ec2-54-90-134-15.compute-1.amazonaws.com/api/items', {
-			mode : 'cors'
+			mode : 'cors',
+			headers : {
+				'Content-Type' : 'application/json',
+			}
+			
 		})
 		.then(res => res.json())
-		.then((result) => {
-			console.log(JSON.parse(result));
-		})
+		.then(result => console.log(result))
 		.catch((err) => {
 			console.log(err);
 		})
@@ -33,9 +35,9 @@ class Table extends React.Component{
 		const items = this.state.tableData.map((item) => {
 			return (
 				<tr className = 'tr'>
-					<td className = 'td'>{item.category}</td>
-					<td className = 'td'>{item.itemId}</td>
-					<td className = 'td'>{item.name}</td>
+					<td className = 'td'>{items.category}</td>
+					<td className = 'td'>{items.itemId}</td>
+					<td className = 'td'>{items.name}</td>
 				</tr>
 			);
 		});

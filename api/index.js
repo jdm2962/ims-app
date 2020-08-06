@@ -80,13 +80,13 @@ app.get('/api/item/:category/:name', (req, res) => {
 		}
 		else {
 			resData = {
-				'category' : data.Item.category.S,
-				'name' : data.Item.name.S,
-				'id' : data.Item.id.S,
-				'singles' : data.Item.singles.N,
-				'packages' : data.Item.packages.N,
-				'quantityPerPackage' : data.Item.quantityPerPackage.N,
-				'total' : data.Item.total.N
+				"category" : data.Item.category.S,
+				"name" : data.Item.name.S,
+				"id" : data.Item.id.S,
+				"singles" : data.Item.singles.N,
+				"packages" : data.Item.packages.N,
+				"quantityPerPackage" : data.Item.quantityPerPackage.N,
+				"total" : data.Item.total.N
 			}
 			res.json(resData);
 			resData = [];
