@@ -172,6 +172,7 @@ app.delete('/api/item/:category/:name', (req, res) => {
 app.put('/api/item/:category/:name', (req, res) => {
 	let category = req.params.category;
 	let name = req.params.name;
+	let total = 0;
 	let updateExpression = 'SET ';
 	let expressionAttributeValues = {};
 	const params = {
@@ -180,73 +181,153 @@ app.put('/api/item/:category/:name', (req, res) => {
 			'category' : {'S': category},
 			'name' : {'S': name}
 		},
+		ExpressionAttributeNames : {},
 		ExpressionAttributeValues : expressionAttributeValues,
 		UpdateExpression: updateExpression,
 		ReturnValues: 'ALL_NEW',
 		ConditionExpression : 'attribute_exists(id)'
 	};
 	const correctParams = ['singles', 'packages', 'quantityPerPackage'];
+	const queryArray = Object.entries(req.query);
+	let queryNonNumber = false;
+	let incorrectParam = false;
+	let needPackages = false;
+	let needQuantity = false;
+	let nonNumberList = [];
+	let incorrectParams = [];
+
+	// loop through param values. check for non number entries
+	for([key, value] of Object.entries(req.query)){
+		if(isNaN(parseInt(value))){ 
+			queryNonNumber = true;
+			nonNumberList.push(`${key} : ${value}`);
+		}
+
+		if(!correctParams.includes(key)){
+			incorrectParam = true;
+			incorrectParams.push(key);
+		}
+	}
+
 
 	// make sure category or name is not being updated
-	if(req.query.name || req.query.category){
-		res.status(400).send('Cannot update category or name. Create a new item.')
+	if(req.query.name || req.query.category) res.status(400).send('Cannot update category or name. Create a new item.');
+
+	// check for valid parameters
+	else if(incorrectParam) res.status(400).send(`One or more incorrect parameters. Incorrect parameters: ${incorrectParams}. Correct paramters are singles, packages, quantityPerPackage`);
+
+	// check for correct param types(only numbers)
+	else if(queryNonNumber){
+		res.status(400).send(`One or more of the entered parameters is not a number. Please fix these parameters: ${nonNumberList}`)
 	}
 
 	else{	// populate expressionAttributeValues and updateExpression
-	
-		const queryArray = Object.entries(req.query);
 
 		for(const index in queryArray){
 			let key = queryArray[index][0];
 			let value = queryArray[index][1];
 
-			// check for incorrect query string params
-			if(!correctParams.includes(key)) res.status(400).send('Error. One or more incorrect parameters. Correct parameters are singles, packages, quantityPerPackage');
-			else{
+			expressionAttributeValues[`:${key[0]}`] = {N : value};
 
-				// populate expressionAttributeValues
-				if(isNaN(parseInt(value))) res.status(400).send(`Value for ${key} should be a number.`);
-				else expressionAttributeValues[`:${key[0]}`] = {N : value};
-
-				// populate updateExpression
-				// use different formatting if value is the last element in the array
-				if(parseInt(index) === (queryArray.length - 1)) updateExpression += `${key} = :${key[0]}`;
-				else updateExpression += `${key} = :${key[0]}, `;
+			// populate updateExpression
+			// use different formatting if value is the last element in the array
+			if(parseInt(index) === (queryArray.length - 1)){
+				updateExpression += `${key} = :${key[0]}`;
+			} 
+			else {
+				updateExpression += `${key} = :${key[0]}, `;
 			}
+			
 		}
 
-		// calculate total if necessary
+		// calculate total items value
 
-		// check if singles, packages, or quantitiyPerPackage is in the query string params
+		let singles, packages, quantityPerPackage;
 
-		// if some are present check to see if all necessary to calculate total are there
+		// determine whether or not to query db for extra info
+		if(!req.query.packages || !req.query.quantityPerPackage || !req.query.singles){
+			console.log('param not there')
 
-		// if not, query db for rest
-			// calculate total
-			// add total to updateExpression
+			let getParams = {
+				TableName : tableName,
+				Key : params.Key
+			};
 
-		// if they are add to updateExpression
-
-		
-
-		params.UpdateExpression = updateExpression;
-		params.ExpressionAttributeValues = expressionAttributeValues;
-
-		dynamo.updateItem(params, (err, data) => {
-
-			if(err){
-				if(err.code === 'ConditionalCheckFailedException') res.status(400).send("Error. You can only update existing items.");
-				else{
+			dynamo.getItem(getParams, (err, data) => {
+				if(err){
 					console.log(err);
-					res.status(500).send('Server Error')
+					res.status(500).send('Server Error');
 				}
-			}
-			else
-			{
-				res.json(data);
-			}
+				// check for an empty data object(item not found)
+				// else if(!data.Item) res.status(400).send('Error in path. Item not found.');
+				else{
+					console.log('calculating total...')
+					singles = (req.query.singles) ? req.query.singles : data.Item.singles.N;
+					packages = (req.query.packages) ? req.query.packages : data.Item.packages.N;
+					quantityPerPackage = (req.query.quantityPerPackage) ? req.query.quantityPerPackage : data.Item.quantityPerPackage.N;
 
-		});
+					if(packages == 0 && quantityPerPackage != 0){
+						console.log('need packages');
+						needPackages = true;;
+					} 
+					else if(quantityPerPackage == 0 && packages != 0){
+						console.log('need quantity');
+						needQuantity = true;
+					}
+					else{
+						console.log('everything is good :)')
+						total = parseInt(singles) + parseInt(packages) * parseInt(quantityPerPackage);
+						console.log(total);
+					} 
+				}
+			});
+		}
+		else{	// all the required params are there. calculate total
+			total = parseInt(req.query.singles) + parseInt(req.query.packages) * parseInt(req.query.quantityPerPackage);
+			console.log('total:', total); 
+		}
+		// temporary fix. get item taking a long time to return... causing issues
+		setTimeout(() => {
+
+			// verify that the correct values are present
+			if(needPackages === true){
+				res.status(400).send('Error. Quantity per package found but amount of packages not found. Enter amount of packages');
+			} 
+			else if(needQuantity === true){
+				console.log('quantity needed');
+				res.status(400).send('Error. Packages found but quantity per package not found. Enter quantityPerPackage.');
+			} 
+
+			else{
+
+				console.log('block beofore update item');
+				if(total !== 0){
+					expressionAttributeValues[':t'] = {N : total.toString()};
+					params.ExpressionAttributeNames['#t'] = 'total';
+					updateExpression += `, #t = :t`;
+				}
+				
+				console.log(updateExpression)
+
+				params.UpdateExpression = updateExpression;
+				params.ExpressionAttributeValues = expressionAttributeValues;
+				dynamo.updateItem(params, (err, data) => {
+
+					if(err){
+						if(err.code === 'ConditionalCheckFailedException') res.status(400).send("Error. You can only update existing items.");
+						else{
+							console.log(err);
+							res.status(500).send('Server Error')
+						}
+					}
+					else
+					{
+						res.json(data);
+					}
+
+				});
+			}	
+		}, 500);
 	}
 });
 
