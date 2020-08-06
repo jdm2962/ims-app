@@ -43,10 +43,11 @@ app.get('/api/items', (req, res) => {
 				}
 			);
 		});
-		res.json(resData);
-		resData = [];
 		
 	});
+
+		res.json(resData);
+		resData = [];
 });
 
 

@@ -15,12 +15,17 @@ class Table extends React.Component{
 
 	componentDidMount(){
 
-		fetch('http://ec2-54-90-134-15.compute-1.amazonaws.com/api/items')
+		fetch('ec2-54-90-134-15.compute-1.amazonaws.com/api/items', {
+			mode : 'cors'
+		})
 		.then(res => res.json())
 		.then((result) => {
-			console.log(result);
+			console.log(JSON.parse(result));
 		})
-		}
+		.catch((err) => {
+			console.log(err);
+		})
+	}
 
 
 	render(){
@@ -44,7 +49,7 @@ class Table extends React.Component{
 						<th className = 'th'>ID</th>
 						<th className = 'th'>Name</th>
 					</tr>
-					{items}
+
 				</tbody>
 			</table>
 		);
