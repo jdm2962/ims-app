@@ -37,9 +37,9 @@ app.get('/api/items', (req, res) => {
 					'id' : item.id.S,
 					'name' : item.name.S,
 					'singles' : item.singles.N,
-					'packages' : item.packages.N,
-					'quantityPerPackage' : item.quantityPerPackage.N,
-					'total' : item.total.N
+					'packages' : parseInt(item.packages.N),
+					'quantityPerPackage' : paseInt(item.quantityPerPackage.N),
+					'total' : parseInt(item.total.N)
 				}
 			);
 		});
