@@ -79,8 +79,9 @@ app.get('/api/item/:category/:name', (req, res) => {
 			res.status(404).send('Sorry, it looks like that item doesn\'t exist');
 		}
 		else {
+			let cat = data.Item.category.S;
 			resData = {
-				"category" : data.Item.category.S,
+				"category" : cat,
 				"name" : data.Item.name.S,
 				"id" : data.Item.id.S,
 				"singles" : data.Item.singles.N,
@@ -88,7 +89,9 @@ app.get('/api/item/:category/:name', (req, res) => {
 				"quantityPerPackage" : data.Item.quantityPerPackage.N,
 				"total" : data.Item.total.N
 			}
-			res.json(resData);
+			// res.json(resData);
+			res.set('Content-Type', 'application/json');
+			res.send(JSON.stringify(resData)); 
 			resData = [];
 		}
 	});

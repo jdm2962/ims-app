@@ -15,13 +15,7 @@ class Table extends React.Component{
 
 	componentDidMount(){
 
-		fetch('ec2-54-90-134-15.compute-1.amazonaws.com/api/items', {
-			mode : 'cors',
-			headers : {
-				'Content-Type' : 'application/json',
-			}
-			
-		})
+		fetch('ec2-54-90-134-15.compute-1.amazonaws.com/api/item/fruit/apple')
 		.then(res => res.json())
 		.then(result => console.log(result))
 		.catch((err) => {
