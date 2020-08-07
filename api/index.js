@@ -24,30 +24,30 @@ app.get('/api', (req, res) => {
 // get all items
 app.get('/api/items', (req, res) => {
 	const params = {
-	TableName : tableName,
+		TableName : tableName,
 	};
 	resData = [];
 
 	dynamo.scan(params, (err, data) => {
 		if(err) throw err;
-		data['Items'].map((item) => {
+		data['Items'].forEach((item) => {
 			resData.push(
 				{
 					'category' : item.category.S,
 					'id' : item.id.S,
 					'name' : item.name.S,
 					'singles' : item.singles.N,
-					'packages' : parseInt(item.packages.N),
-					'quantityPerPackage' : paseInt(item.quantityPerPackage.N),
-					'total' : parseInt(item.total.N)
+					'packages' : item.packages.N,
+					'quantityPerPackage' : item.quantityPerPackage.N,
+					'total' : item.total.N
 				}
 			);
 		});
-		
-	});
+			
+			res.json(resData);
+			resData = [];
 
-		res.json(resData);
-		resData = [];
+	});
 });
 
 
