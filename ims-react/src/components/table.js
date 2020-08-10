@@ -1,5 +1,10 @@
 import React from 'react';
 
+import {TableData, TableButton, TableRow} from './tableComponents.js';
+
+
+
+
 
 class Table extends React.Component{
 
@@ -10,7 +15,6 @@ class Table extends React.Component{
 
 			// this is going to be an api call
 			tableData : [],
-			items : []
 		}
 	}
 
@@ -19,9 +23,29 @@ class Table extends React.Component{
 		fetch('http://ec2-3-94-195-38.compute-1.amazonaws.com/api/items')
 			.then(res => res.json())
 			.then((result) => {
-				console.log(result);
+				
+				const items = Object.values(result).map((item) => {
+					return (
+						<TableRow  key = {item.id}>
+							<TableData data = {item.category} name = 'category'/>
+							<TableData data = {item.name} name = 'name'/>
+							<TableData data = {item.id} name = 'id'/>
+							<TableData data = {item.singles} name = 'singles'/>
+							<TableData data = {item.packages} name = 'packages'/>
+							<TableData data = {item.quantityPerPackage} name = 'quantityPerPackage'/>
+							<TableData data = {item.total} name = 'total'/>
+							<td className = 'td'>
+								<TableButton name = 'Edit'/>
+								<TableButton name = 'Update' />
+								<TableButton name = 'Delete' />
+							</td>
+						</TableRow>
+					)
+				});
+				// console.log(items);
+
 				this.setState({
-					tableData : Object.entries(result)
+					tableData : items
 				})
 			})
 	}
@@ -29,35 +53,24 @@ class Table extends React.Component{
 
 
 	render(){
-		
-			const items = this.state.tableData.map((item) => {
-			return (
-				<tr className = 'tr' key = {item.itemId}>
-					<td className = 'td'>id</td>
-					<td className = 'td'>category</td>
-					<td className = 'td'>name</td>
-					<td className = 'td'>singles</td>
-					<td className = 'td'>packages</td>
-					<td className = 'td'>quantity per package</td>
-				</tr>
-			);
-		});
 
-			console.log(this.state.tableData);
+			// console.log(this.state.tableData);
 		return(
 
 			<table className = 'table'>
 				<tbody className = 'tbody'>
-					<tr className = 'td'>
+					<tr className = 'tr'>
 						<th className = 'th'>Category</th>
-						<th className = 'th'>ID</th>
 						<th className = 'th'>Name</th>
+						<th className = 'th'>ID</th>
 						<th className = 'th'>Singles</th>
 						<th className = 'th'>Packages</th>
 						<th className = 'th'>Quantity Per Package</th>
+						<th className = 'th'>Total</th>
+						<th className = 'th'>Operations</th>
 					</tr>
 
-					{items}
+					{this.state.tableData}
 
 				</tbody>
 			</table>

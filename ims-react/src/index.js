@@ -1,9 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import 'bulma/css/bulma.css'
+
+import 'bulma/css/bulma.css';
 
 import Header from './components/header.js';
-import Table from './components/table.js';
+import Body from './components/body.js';
+import Footer from './components/footer.js';
 
 
 
@@ -14,8 +16,8 @@ class App extends React.Component{
     return(
       <div className = "">
         <Header />
-        <Table />
-        
+        <Body />
+        <Footer />
       </div>
     );
   }
