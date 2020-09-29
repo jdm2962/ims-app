@@ -2,16 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const uuid = require('uuid')
 
-const aws = require('aws-sdk');
-const dynamo = new aws.DynamoDB({'region' : 'us-east-1'});
-
+const db = require("./db-helpers.js");
 const app = express();
 
 app.use(cors());
 
 const port = 3000;
 
-const tableName = 'ims-table';
+
 
 let resData;
 
@@ -23,31 +21,8 @@ app.get('/api', (req, res) => {
 
 // get all items
 app.get('/api/items', (req, res) => {
-	const params = {
-		TableName : tableName,
-	};
-	resData = [];
-
-	dynamo.scan(params, (err, data) => {
-		if(err) throw err;
-		data['Items'].forEach((item) => {
-			resData.push(
-				{
-					'category' : item.category.S,
-					'id' : item.id.S,
-					'name' : item.name.S,
-					'singles' : item.singles.N,
-					'packages' : item.packages.N,
-					'quantityPerPackage' : item.quantityPerPackage.N,
-					'total' : item.total.N
-				}
-			);
-		});
-			
-			res.json(resData);
-			resData = [];
-
-	});
+	db.getItems()
+		.then(data => res.json(data))
 });
 
 
