@@ -23,11 +23,27 @@ app.get('/api', (req, res) => {
 app.get('/api/items', (req, res) => {
 	db.getItems()
 		.then(data => res.json(data))
+		.catch(err => res.status(500).send("Error collecting items. . . try again."))
 });
 
 
 // get item by id
 app.get('/api/item/:id', (req, res) => {
+	let id = req.params.id;
+	db.getItemById(id)
+		.then(data => res.json(data))
+		.catch(err => 
+			{
+				console.log(err);
+				if(err === "404")
+				{
+					res.status(404).send("That item doesn't exist.");
+				}
+				else
+				{
+					res.status(500).send("Looks like something went wrong... Try again or contact support.");
+				}
+			})
 
 });
 
@@ -36,44 +52,25 @@ app.get('/api/item/:id', (req, res) => {
 app.get('/api/item/:category/:name', (req, res) => {
 	const category = req.params.category;
 	const name = req.params.name;
-	const params = {
-		TableName : tableName,
-		Key : {
-			'category' : {'S' : category},
-			'name' : {'S' : name}
-		}
-	};
 
-	dynamo.getItem(params, (err, data) => {
-		if(err){
+	db.getItem(category, name)
+		.then(data => res.json(data))
+		.catch(err => 
+		{
 			console.log(err);
-			res.status(500).send('Server Error');
-		}
-
-		else if(data.Item === undefined || data.Item === null) {
-			res.status(404).send('Sorry, it looks like that item doesn\'t exist');
-		}
-		else {
-			let cat = data.Item.category.S;
-			resData = {
-				"category" : cat,
-				"name" : data.Item.name.S,
-				"id" : data.Item.id.S,
-				"singles" : data.Item.singles.N,
-				"packages" : data.Item.packages.N,
-				"quantityPerPackage" : data.Item.quantityPerPackage.N,
-				"total" : data.Item.total.N
+			if(err === "404")
+			{
+				res.status(404).send("That item doesn't exist.");
 			}
-			// res.json(resData);
-			res.set('Content-Type', 'application/json');
-			res.send(JSON.stringify(resData)); 
-			resData = [];
-		}
-	});
+			else
+			{
+				res.status(500).send("Looks like something went wrong... Try again or contact support.");
+			}
+
+		});
 });
 
 // insert an item w/ attributes
-
 app.post('/api/item', (req, res) => {
 	let id = uuid.v4();
 	let name = (!req.query.name) ? '' : req.query.name.toLowerCase();
