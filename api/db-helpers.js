@@ -105,7 +105,7 @@ const getItemById = (id) =>
 			}
 			else
 			{
-				if(!data.Items)
+				if(data.Items.length === 0)
 				{
 					reject("404");
 				}
@@ -120,8 +120,43 @@ const getItemById = (id) =>
 };
 
 
-const putItem = () =>
+const insertItem = (id, category, name, singles, packages, quantityPerPackage, total) =>
 {
+	const params = {
+		TableName : tableName,
+		Item : {
+			'id' : {'S' : id},
+			'category' : {'S' : category},
+			'name' : {'S' : name},
+			'singles' : {'N' : singles.toString()},
+			'packages' : {'N' : packages.toString()},
+			'quantityPerPackage' : {'N' : quantityPerPackage.toString()},
+			'total' : {'N' : total.toString()}
+
+		},
+		ConditionExpression : 'attribute_not_exists(id)', 
+	};
+
+	return new Promise((resolve, reject) => 
+	{
+		dynamo.putItem(params, (err, data) => 
+		{
+			if(err){
+				if(err.code === 'ConditionalCheckFailedException')
+				{
+					reject("400");	
+				} 
+				else{
+					console.log(err);
+					reject("500");
+				}
+			}
+			else
+			{
+				resolve("Success. Item entered.");
+			}
+		});
+	});
 
 };
 
@@ -139,6 +174,6 @@ const deleteItem = () =>
 exports.getItems = getItems;
 exports.getItem = getItem;
 exports.getItemById = getItemById;
-exports.putItem = putItem;
+exports.insertItem = insertItem;
 exports.updateItem = updateItem;
 exports.deleteItem = deleteItem;

@@ -10,10 +10,6 @@ app.use(cors());
 const port = 3000;
 
 
-
-let resData;
-
-
 // home route
 app.get('/api', (req, res) => {
 	res.send("<h1>React HomePage filler!</h1>");
@@ -30,21 +26,21 @@ app.get('/api/items', (req, res) => {
 // get item by id
 app.get('/api/item/:id', (req, res) => {
 	let id = req.params.id;
+	
 	db.getItemById(id)
 		.then(data => res.json(data))
 		.catch(err => 
+		{
+			console.log(err);
+			if(err === "404")
 			{
-				console.log(err);
-				if(err === "404")
-				{
-					res.status(404).send("That item doesn't exist.");
-				}
-				else
-				{
-					res.status(500).send("Looks like something went wrong... Try again or contact support.");
-				}
-			})
-
+				res.status(404).send("Item doesn't exist or incorrect parameter. . . try again.");
+			}
+			else
+			{
+				res.status(500).send("Looks like something went wrong... Try again or contact support.");
+			}
+		})
 });
 
 
@@ -67,49 +63,35 @@ app.get('/api/item/:category/:name', (req, res) => {
 				res.status(500).send("Looks like something went wrong... Try again or contact support.");
 			}
 
-		});
+		})
 });
 
 // insert an item w/ attributes
-app.post('/api/item', (req, res) => {
+app.post('/api/item/:category/:name', (req, res) => {
 	let id = uuid.v4();
-	let name = (!req.query.name) ? '' : req.query.name.toLowerCase();
-	let category = (!req.query.category) ? 'uncategorized' : req.query.category.toLowerCase();
+	// let name = (!req.query.name) ? '' : req.query.name.toLowerCase();
+	// let category = (!req.query.category) ? 'uncategorized' : req.query.category.toLowerCase();
+	let category = req.params.category;
+	let name = req.params.name;
 	let singles = (!req.query.singles) ? 0 : req.query.singles;
 	let packages = (!req.query.packages) ? 0 : req.query.packages;
 	let quantityPerPackage = (!req.query.quantityPerPackage) ? 0 : req.query.quantityPerPackage;
 	let total = parseInt(singles) + (quantityPerPackage * packages);
 
-	const params = {
-		TableName : tableName,
-		Item : {
-			'id' : {'S' : id},
-			'category' : {'S' : category},
-			'name' : {'S' : name},
-			'singles' : {'N' : singles.toString()},
-			'packages' : {'N' : packages.toString()},
-			'quantityPerPackage' : {'N' : quantityPerPackage.toString()},
-			'total' : {'N' : total.toString()}
-
-		},
-		ConditionExpression : 'attribute_not_exists(id)', 
-	};
-	// check to see if item attributes have been given
-	if(Object.keys(req.query).length === 0) res.status(400).send("Error, need to enter item attributes.");
-	else if(!name) res.status(400).send("Error, must enter an item name.");
-	else
-	{
-		dynamo.putItem(params, (err, data) => {
-			if(err){
-				if(err.code === 'ConditionalCheckFailedException') res.status(400).send("Item already exists.");
-				else{
-					console.log(err);
-					res.status(500).send('Server Error');
-				}
+	db.insertItem(id, category, name, singles, packages, quantityPerPackage, total)
+		.then(data => res.json(data))
+		.catch(err =>
+		{
+			if(err === "400")
+			{
+				res.json("Item already exists");
 			}
-			else res.status(200).send("Success. Item entered");
-		});
-	}
+			else
+			{
+				res.status(500).send("Something went wrong. Try again or contact support.");
+			}
+		})
+	
 });
 
 // delete an item by id
