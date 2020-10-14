@@ -21,6 +21,7 @@ const convertOutput = (items) =>
 	return returnList;
 };
 
+
 const getItems = () =>
 {
 	const params = 
@@ -72,7 +73,7 @@ const getItem = (category, name) =>
 			{
 				if(!data.Item)
 				{
-					reject("404")
+					reject("404");
 				}
 				else
 				{
@@ -93,7 +94,7 @@ const getItemById = (id) =>
 		IndexName : idIndex,
 		ExpressionAttributeValues : {":id" : converter.input(id)},
 		KeyConditionExpression : "id = :id"
-	}
+	};
 
 	return new Promise((resolve, reject) => 
 	{
@@ -160,14 +161,87 @@ const insertItem = (id, category, name, singles, packages, quantityPerPackage, t
 
 };
 
-const updateItem = () =>
+const updateItem = (category, name, singles, packages, quantityPerPackage, total) =>
 {
+	const params = {
+		TableName : tableName,
+		Key : {
+			'category' : {'S': category},
+			'name' : {'S': name}
+		},
+		ExpressionAttributeNames : 
+		{
+			"#S" : "singles",
+			"#P" : "packages",
+			"#Q" : "quantityPerPackage",
+			"#T" : "total",
+		},
+		ExpressionAttributeValues : 
+		{
+			":s" : {N : singles.toString()},
+			":p" : {N : packages.toString()},
+			":q" : {N : quantityPerPackage.toString()},
+			":t" : {N : total.toString()},
+		},
+		UpdateExpression: "SET #S = :s, #P = :p, #Q = :q, #T = :t",
+		ReturnValues: 'ALL_NEW',
+	};
+
+	return new Promise((resolve, reject) =>
+	{
+		dynamo.updateItem(params, (err, data) =>
+		{
+			if(err)
+			{
+				if(err.code === 'ConditionalCheckFailedException')
+				{
+					reject("404");
+				}
+				else
+				{
+					reject(err);
+				}
+			}
+			else
+			{
+				resolve(data);
+			}
+		})		
+	});
 
 };
 
-const deleteItem = () =>
+const deleteItem = (category, name) =>
 {
+	const params = {
+		TableName : tableName,
+		Key : {
+			'category' : {'S' : category},
+			'name' : {'S' : name}
+		},
+		ConditionExpression : 'attribute_exists(id)'
+	};
 
+	return new Promise((resolve, reject) => 
+	{
+		dynamo.deleteItem(params, (err, data) => {
+			if(err){
+				if(err.code === 'ConditionalCheckFailedException')
+				{
+					reject("404");
+				}
+				else
+				{
+					reject("500");
+				}
+				
+			}
+			else 
+			{
+				resolve("Success. Item deleted.");
+			}
+		});
+	});
 };
 
 

@@ -94,208 +94,169 @@ app.post('/api/item/:category/:name', (req, res) => {
 	
 });
 
-// delete an item by id
 
 // delete an item by category + name
 app.delete('/api/item/:category/:name', (req, res) => {
 
 	let category = req.params.category;
 	let name = req.params.name;
-	const params = {
-		TableName : tableName,
-		Key : {
-			'category' : {'S' : category},
-			'name' : {'S' : name}
-		},
-		ConditionExpression : 'attribute_exists(id)'
-	};
-
-	dynamo.deleteItem(params, (err, data) => {
-		if(err){
-			if(err.code === 'ConditionalCheckFailedException') res.status(404).send('It looks like that item doesn\'t exist. Try another item.');
-			else{
-				console.log(err);
-				res.status(500).send("Server Error")
+	
+	db.deleteItem(category, name)
+		.then(data => res.json(data))
+		.catch(err =>
+		{
+			if(err === "404")
+			{
+				res.status(404).send("It looks like that item doesn't exist. Try another item.");
 			}
-			
-		}
-		else res.status(200).send('Success. Item deleted.');
-	});
-
+			else
+			{
+				console.log(err);
+				res.status(500).send("Server error contact support.");
+			}
+		})
 });
 
-// update an item by id
 
 // update an item by category + name
-app.put('/api/item/:category/:name', (req, res) => {
+app.put("/api/item/:category/:name", (req, res) =>
+{
+	// variables : conditionally assign based on values
 	let category = req.params.category;
 	let name = req.params.name;
+	let updates = req.query;
 	let total = 0;
-	let updateExpression = 'SET ';
-	let expressionAttributeValues = {};
-	const params = {
-		TableName : tableName,
-		Key : {
-			'category' : {'S': category},
-			'name' : {'S': name}
-		},
-		ExpressionAttributeNames : {},
-		ExpressionAttributeValues : expressionAttributeValues,
-		UpdateExpression: updateExpression,
-		ReturnValues: 'ALL_NEW',
-		ConditionExpression : 'attribute_exists(id)'
-	};
-	const correctParams = ['singles', 'packages', 'quantityPerPackage'];
-	const queryArray = Object.entries(req.query);
-	let queryNonNumber = false;
-	let incorrectParam = false;
-	let needPackages = false;
-	let needQuantity = false;
-	let nonNumberList = [];
-	let incorrectParams = [];
+	let updateCategory = updates.category;
+	let updateName = updates.name;
+	let updateSingles = updates.singles;
+	let updatePackages = updates.packages;
+	let updateQuantityPerPackage = updates.quantityPerPackage;
+	let updateTotal;
 
-	// loop through param values. check for non number entries
-	for([key, value] of Object.entries(req.query)){
-		if(isNaN(parseInt(value))){ 
-			queryNonNumber = true;
-			nonNumberList.push(`${key} : ${value}`);
-		}
-
-		if(!correctParams.includes(key)){
-			incorrectParam = true;
-			incorrectParams.push(key);
-		}
+	// check for no query string params
+	if(Object.keys(updates).length < 1)
+	{
+		res.status(400).send("Please enter parameter(s) to update.");
 	}
+	else
+	{
+		// determine if the category or name is being updated
+		if(updates.name || updates.category)
+		{	// if so item needs to be deleted then inserted
+			// need to query for more info?
+			if(!updates.name || !updates.category || !updates.singles || !updates.packages || !updates.quantityPerPackage)
+			{
+				db.getItem(category, name)
+					.then(data =>
+					{
+						let oldData = data[0];
+						let id = oldData.id;
+						updateCategory = updates.category ? updates.category : oldData.category;
+						updateName = updates.name ? updates.name : oldData.name;
+						updateSingles = !(updates.singles === undefined) ? updates.singles : oldData.singles;
+						updatePackages = !(updates.packages === undefined) ? updates.packages : oldData.packages;
+						updateQuantityPerPackage = !(updates.quantityPerPackage === undefined) ? updates.quantityPerPackage : oldData.quantityPerPackage;
+						updateTotal = parseInt(updateSingles) + updatePackages * updateQuantityPerPackage;
 
-
-	// make sure category or name is not being updated
-	if(req.query.name || req.query.category) res.status(400).send('Cannot update category or name. Create a new item.');
-
-	// check for valid parameters
-	else if(incorrectParam) res.status(400).send(`One or more incorrect parameters. Incorrect parameters: ${incorrectParams}. Correct paramters are singles, packages, quantityPerPackage`);
-
-	// check for correct param types(only numbers)
-	else if(queryNonNumber){
-		res.status(400).send(`One or more of the entered parameters is not a number. Please fix these parameters: ${nonNumberList}`)
-	}
-
-	else{	// populate expressionAttributeValues and updateExpression
-
-		for(const index in queryArray){
-			let key = queryArray[index][0];
-			let value = queryArray[index][1];
-
-			expressionAttributeValues[`:${key[0]}`] = {N : value};
-
-			// populate updateExpression
-			// use different formatting if value is the last element in the array
-			if(parseInt(index) === (queryArray.length - 1)){
-				updateExpression += `${key} = :${key[0]}`;
-			} 
-			else {
-				updateExpression += `${key} = :${key[0]}, `;
-			}
-			
-		}
-
-		// calculate total items value
-
-		let singles, packages, quantityPerPackage;
-
-		// determine whether or not to query db for extra info
-		if(!req.query.packages || !req.query.quantityPerPackage || !req.query.singles){
-			console.log('param not there')
-
-			let getParams = {
-				TableName : tableName,
-				Key : params.Key
-			};
-
-			dynamo.getItem(getParams, (err, data) => {
-				if(err){
-					console.log(err);
-					res.status(500).send('Server Error');
-				}
-				// check for an empty data object(item not found)
-				// else if(!data.Item) res.status(400).send('Error in path. Item not found.');
-				else{
-					console.log('calculating total...')
-					singles = (req.query.singles) ? req.query.singles : data.Item.singles.N;
-					packages = (req.query.packages) ? req.query.packages : data.Item.packages.N;
-					quantityPerPackage = (req.query.quantityPerPackage) ? req.query.quantityPerPackage : data.Item.quantityPerPackage.N;
-
-					if(packages == 0 && quantityPerPackage != 0){
-						console.log('need packages');
-						needPackages = true;;
-					} 
-					else if(quantityPerPackage == 0 && packages != 0){
-						console.log('need quantity');
-						needQuantity = true;
-					}
-					else{
-						console.log('everything is good :)')
-						total = parseInt(singles) + parseInt(packages) * parseInt(quantityPerPackage);
-						console.log(total);
-					} 
-				}
-			});
-		}
-		else{	// all the required params are there. calculate total
-			total = parseInt(req.query.singles) + parseInt(req.query.packages) * parseInt(req.query.quantityPerPackage);
-			console.log('total:', total); 
-		}
-		// temporary fix. get item taking a long time to return... causing issues
-		setTimeout(() => {
-
-			// verify that the correct values are present
-			if(needPackages === true){
-				res.status(400).send('Error. Quantity per package found but amount of packages not found. Enter amount of packages');
-			} 
-			else if(needQuantity === true){
-				console.log('quantity needed');
-				res.status(400).send('Error. Packages found but quantity per package not found. Enter quantityPerPackage.');
-			} 
-
-			else{
-
-				console.log('block beofore update item');
-				if(total !== 0){
-					expressionAttributeValues[':t'] = {N : total.toString()};
-					params.ExpressionAttributeNames['#t'] = 'total';
-					updateExpression += `, #t = :t`;
-				}
-				
-				console.log(updateExpression)
-
-				params.UpdateExpression = updateExpression;
-				params.ExpressionAttributeValues = expressionAttributeValues;
-				dynamo.updateItem(params, (err, data) => {
-
-					if(err){
-						if(err.code === 'ConditionalCheckFailedException') res.status(400).send("Error. You can only update existing items.");
-						else{
-							console.log(err);
-							res.status(500).send('Server Error')
+						// delete old item
+						db.deleteItem(category, name)
+							.then(data => 
+							{
+								// insert new item
+								console.log(updates.quantityPerPackage);
+								db.insertItem(id, updateCategory, updateName, updateSingles, updatePackages, updateQuantityPerPackage, updateTotal)
+									.then(data => res.send("Success. Item updated."))
+									.catch(err => console.log(err))
+							})
+							.catch(err => 
+								{
+									console.log(err);
+									res.status(500).send("Failed to update item... try again.");
+								})
+						
+					})
+					.catch(err =>
+					{
+						if(err === "404")
+						{
+							res.status(404).send("Item doesn't exist. . . Try again.")
 						}
+						else
+						{
+							res.status(500).send("Server Error. Contact support.")
+						}
+					})
+			}
+			else
+			{	// all values were given for update
+				updateTotal = parseInt(updateSingles) + updatePackages * updateQuantityPerPackage;
+				db.deleteItem(category, name)
+					.then(data =>
+					{
+						db.insertItem(uuid.v4(), updateCategory, updateName, updateSingles, updatePackages, updateQuantityPerPackage, updateTotal)
+							.then(data => res.send("Success. Item updated."))
+							.catch(err => console.log(err))
+
+					})
+					.catch(err => 
+					{
+						if(err === "404")
+						{
+							res.status(404).send("Item doesn't exist. . . Try again.")
+						}
+						else
+						{
+							res.status(500).send("Server Error. Contact support.")
+						}
+					})
+			}
+		}
+		else
+		{
+			// else update with new values
+			// retrieve any missing values from db(id is going to be missing at least)
+			db.getItem(category, name)
+				.then(data =>
+				{
+					let oldData = data[0];
+					updateSingles = updateSingles ? updateSingles : oldData.singles;
+					updatePackages = updatePackages ? updatePackages : oldData.packages;
+					updateQuantityPerPackage = updateQuantityPerPackage ? updateQuantityPerPackage : oldData.quantityPerPackage;
+					updateTotal = parseInt(updateSingles) + updatePackages * updateQuantityPerPackage;
+					console.log(updateSingles, updatePackages, updateQuantityPerPackage);
+
+					// then update item
+					db.updateItem(category, name, updateSingles, updatePackages, updateQuantityPerPackage, updateTotal)
+						.then(data => res.send("Success item updated."))
+						.catch(err =>
+						{
+							if(err === "404")
+							{
+								res.status(404).send("Item does not exist.");
+							}
+							else
+							{
+								console.log(err);
+								res.status(500).send("Server error. Contact support.")
+							}
+						})
+				})
+				.catch(err =>
+				{
+					console.log(err);
+					if(err === "404")
+					{
+						res.status(404).send("Could not find item to update... try again");
 					}
 					else
 					{
-						res.json(data);
+						res.status(500).send("Server error... try again or contact support.");
 					}
-
-				});
-			}	
-		}, 500);
+				})
+		}
 	}
+
 });
 
+
 app.listen(port, () => console.log(`Server listening at http://localhost:${port}`));
-
-
-
-
-
-
-
-
-
